@@ -102,4 +102,62 @@ public class ProblemSerdeTest {
         //and:
         assertEquals("{\"type\":\"https://example.org/out-of-stock\",\"title\":\"Out of Stock\",\"status\":400,\"detail\":\"Item B00027Y5QG is no longer available\",\"parameters\":{\"product\":\"B00027Y5QG\"}}", bodyOptional.get());
     }
+
+    @Test
+    void ConstraintViolationIsRenderedToMapWithSerde() throws IOException {
+        //given:
+        BlockingHttpClient client = httpClient.toBlocking();
+        //when:
+        Argument<?> okArg = Argument.of(String.class);
+        Argument<?> errorArg = Argument.of(Map.class);
+        HttpClientResponseException e = assertThrows(HttpClientResponseException.class, () ->
+                client.exchange(HttpRequest.GET(UriBuilder.of("/product/constraint").build()), okArg, errorArg)
+        );
+
+        //then:
+        assertEquals(HttpStatus.BAD_REQUEST, e.getStatus());
+        assertTrue(e.getResponse().getContentType().isPresent());
+        assertEquals("application/problem+json", e.getResponse().getContentType().get().toString());
+
+        //when:
+        Optional<Map> bodyOptional = e.getResponse().getBody(Map.class);
+
+        //then:
+        assertNotNull(bodyOptional);
+        assertTrue(bodyOptional.isPresent());
+
+        //and:
+        assertEquals(4, bodyOptional.get().keySet().size());
+        assertEquals(400, bodyOptional.get().get("status"));
+        assertEquals("Constraint Violation", bodyOptional.get().get("title"));
+        assertEquals("https://zalando.github.io/problem/constraint-violation", bodyOptional.get().get("type"));
+        assertNotNull(bodyOptional.get().get("violations"));
+    }
+
+    @Test
+    void ConstraintViolationIsRenderedToStringWithSerde() throws IOException {
+        //given:
+        BlockingHttpClient client = httpClient.toBlocking();
+        //when:
+        Argument<?> okArg = Argument.of(String.class);
+        Argument<?> errorArg = Argument.of(String.class);
+        HttpClientResponseException e = assertThrows(HttpClientResponseException.class, () ->
+                client.exchange(HttpRequest.GET(UriBuilder.of("/product/constraint").build()), okArg, errorArg)
+        );
+
+        //then:
+        assertEquals(HttpStatus.BAD_REQUEST, e.getStatus());
+        assertTrue(e.getResponse().getContentType().isPresent());
+        assertEquals("application/problem+json", e.getResponse().getContentType().get().toString());
+
+        //when:
+        Optional<String> bodyOptional = e.getResponse().getBody(String.class);
+
+        //then:
+        assertNotNull(bodyOptional);
+        assertTrue(bodyOptional.isPresent());
+
+        //and:
+        assertEquals("{\"type\":\"https://zalando.github.io/problem/constraint-violation\",\"title\":\"Constraint Violation\",\"status\":400,\"violations\":[{\"field\":\"foo\",\"message\":\"bar\"}]}", bodyOptional.get());
+    }
 }

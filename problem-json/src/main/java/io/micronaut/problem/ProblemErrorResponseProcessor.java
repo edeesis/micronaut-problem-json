@@ -129,7 +129,7 @@ public class ProblemErrorResponseProcessor implements ErrorResponseProcessor<Pro
                 .orElse(false);
     }
 
-    @Introspected
+    @Introspected(accessKind = { Introspected.AccessKind.FIELD, Introspected.AccessKind.METHOD })
     static final class ThrowableProblemWithoutStacktrace implements Problem {
         @JsonUnwrapped
         @JsonIgnoreProperties(value = {"stackTrace", "localizedMessage", "message", "type", "title", "status", "detail", "instance", "parameters"})
